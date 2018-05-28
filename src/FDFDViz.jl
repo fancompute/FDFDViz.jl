@@ -106,7 +106,7 @@ function add_scalebar(ax::PyObject, xy::AbstractArray; fc::String="k", width::Nu
     end
 end
 
-"    add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String="k", height::Number=0.125)"
+"    add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String=\"k\", height::Number=0.125)"
 function add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String="k", height::Number=0.125)
 	λ₀ = 2π*c₀/real(field.ω)/1e-6
 	println(λ₀)
@@ -114,7 +114,7 @@ function add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::St
     ax[:annotate](xy=xy+[0,height/2],s=L"$\lambda_0$",fontsize="smaller",ha="center",va="bottom",multialignment="center",color=fc);
 end
 
-"    add_wavelengthbar(axs::Array{<:PyObject}, fields::Array{<:Field}, xy::AbstractArray; fc::String="k", height::Number=0.125)"
+"    add_wavelengthbar(axs::Array{<:PyObject}, fields::Array{<:Field}, xy::AbstractArray; fc::String=\"k\", height::Number=0.125)"
 function add_wavelengthbar(axs::Array{<:PyObject}, fields::Array{<:Field}, xy::AbstractArray; fc::String="k", height::Number=0.125)
 	for i in eachindex(axs)
 		add_wavelengthbar(axs[i], fields[i], xy, fc=fc, height=height)
