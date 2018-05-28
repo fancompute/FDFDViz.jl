@@ -109,7 +109,6 @@ end
 "    add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String=\"k\", height::Number=0.125)"
 function add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String="k", height::Number=0.125)
 	λ₀ = 2π*c₀/real(field.ω)/1e-6
-	println(λ₀)
     ax[:add_patch](matplotlib[:patches][:Rectangle](xy-[λ₀/2,height/2],λ₀,height,fc=fc));
     ax[:annotate](xy=xy+[0,height/2],s=L"$\lambda_0$",fontsize="smaller",ha="center",va="bottom",multialignment="center",color=fc);
 end
