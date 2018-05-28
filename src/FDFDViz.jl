@@ -1,8 +1,8 @@
 module FDFDViz
 
-using FDFD, PyPlot, PyCall
+using FDFD, PyPlot, PyCall, AxisArrays
 
-export plot_field, plot_device, add_scalebar
+export plot_field, plot_device, add_scalebar, add_wavelengthbar
 
 "    plot_field(fields::Array{<:Field}; cbar::Bool=false, funcz=real)"
 function plot_field(fields::Array{<:Field}; cbar::Bool=false, funcz=real)
@@ -23,8 +23,8 @@ end
 
 "    plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)"
 function plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)
-	isa(field, FieldTM) && (Z = funcz.(field.Ez).');
-	isa(field, FieldTE) && (Z = funcz.(field.Hz).');
+	isa(field, FieldTM) && (Z = funcz.(field[Axis{:component}(:Ez)]).');
+	isa(field, FieldTE) && (Z = funcz.(field[Axis{:component}(:Hz)]).');
 
 	if funcz == abs
 		vmin = 0;
@@ -39,13 +39,14 @@ function plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)
 		error("Unknown function specified.");
 	end
 
-	extents = [ field.grid.bounds[1][1], field.grid.bounds[2][1], 
+	extents = [ field.grid.bounds[1][1], field.grid.bounds[2][1],
 	            field.grid.bounds[1][2], field.grid.bounds[2][2] ];
-	
+
 	mappable = ax[:imshow](Z, cmap=cmap, extent=extents, origin="lower", vmin=vmin, vmax=vmax);
 	cbar && colorbar(mappable, ax=ax, label=L"$\vert E \vert$");
 	ax[:set_xlabel](L"$x$");
 	ax[:set_ylabel](L"$y$");
+	ax[:set_title](@sprintf("ω/2π = %.2f THz", real(field.ω/2π/1e12)));
 end
 
 "    plot_device(device::AbstractDevice; outline::Bool=false)"
@@ -65,15 +66,20 @@ end
 "    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
 function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
 	Z = real.(device.ϵᵣ)';
+	Zi = imag.(device.ϵᵣ)';
 
 	if outline
 		ax[:contour](xc(device.grid), yc(device.grid), Z, levels=1, linewidths=0.5, colors=lc);
 		axis("image");
 	else
-		extents = [ device.grid.bounds[1][1], device.grid.bounds[2][1], 
+		extents = [ device.grid.bounds[1][1], device.grid.bounds[2][1],
 		            device.grid.bounds[1][2], device.grid.bounds[2][2] ];
 		ax[:imshow](Z, extent=extents, origin="lower", cmap="YlGnBu");
 	end
+
+	#if maximum.(abs.(Zi)[:]) > 0.0
+		ax[:contour](xc(device.grid), yc(device.grid), Zi, cmap="YlGnBu_r");
+	#end
 
 	if isa(device, ModulatedDevice)
 		Z2 = abs.(device.Δϵᵣ)';
@@ -98,6 +104,21 @@ function add_scalebar(ax::PyObject, xy::AbstractArray; fc::String="k", width::Nu
     	ax[:axes][:get_xaxis]()[:set_visible](false);
     	ax[:axes][:get_yaxis]()[:set_visible](false);
     end
+end
+
+"    add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String="k", height::Number=0.125)"
+function add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String="k", height::Number=0.125)
+	λ₀ = 2π*c₀/real(field.ω)/1e-6
+	println(λ₀)
+    ax[:add_patch](matplotlib[:patches][:Rectangle](xy-[λ₀/2,height/2],λ₀,height,fc=fc));
+    ax[:annotate](xy=xy+[0,height/2],s=L"$\lambda_0$",fontsize="smaller",ha="center",va="bottom",multialignment="center",color=fc);
+end
+
+"    add_wavelengthbar(axs::Array{<:PyObject}, fields::Array{<:Field}, xy::AbstractArray; fc::String="k", height::Number=0.125)"
+function add_wavelengthbar(axs::Array{<:PyObject}, fields::Array{<:Field}, xy::AbstractArray; fc::String="k", height::Number=0.125)
+	for i in eachindex(axs)
+		add_wavelengthbar(axs[i], fields[i], xy, fc=fc, height=height)
+	end
 end
 
 end
