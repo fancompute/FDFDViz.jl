@@ -4,16 +4,6 @@ using FDFD, PyPlot, PyCall, AxisArrays
 
 export plot_field, plot_device, add_scalebar, add_wavelengthbar
 
-"    plot_field(fields::Array{<:Field}; cbar::Bool=false, funcz=real)"
-function plot_field(fields::Array{<:Field}; cbar::Bool=false, funcz=real)
-	nfields = length(fields);
-	fig, axs = subplots(nfields, 1, constrained_layout=true);
-	for i in eachindex(fields)
-		plot_field(axs[i], fields[i]; cbar=cbar, funcz=funcz);
-	end
-	return axs
-end
-
 "    plot_field(field::Field; cbar::Bool=false, funcz=real)"
 function plot_field(field::Field; cbar::Bool=false, funcz=real)
 	fig, ax = subplots(1);
@@ -23,8 +13,8 @@ end
 
 "    plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)"
 function plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)
-	isa(field, FieldTM) && (Z = funcz.(field[Axis{:component}(:Ez)]).');
-	isa(field, FieldTE) && (Z = funcz.(field[Axis{:component}(:Hz)]).');
+	isa(field, FieldTM) && (Z = funcz.(field[:,:,:Ez]).');
+	isa(field, FieldTE) && (Z = funcz.(field[:,:,:Hz]).');
 
 	if funcz == abs
 		vmin = 0;
@@ -56,20 +46,13 @@ function plot_device(device::AbstractDevice; outline::Bool=false)
 	return ax
 end
 
-"    plot_device(ax::Array{<:PyObject}, device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
-function plot_device(axs::Array{<:PyObject}, device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
-	for i in eachindex(axs)
-		plot_device(axs[i], device, outline=outline, lc=lc, lcm=lcm);
-	end
-end
-
 "    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
 function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
 	Z = real.(device.ϵᵣ)';
 	Zi = imag.(device.ϵᵣ)';
 
 	if outline
-		ax[:contour](xc(device.grid), yc(device.grid), Z, levels=1, linewidths=0.5, colors=lc);
+		ax[:contour](xc(device.grid), yc(device.grid), Z, linewidths=0.25, colors=lc);
 		axis("image");
 	else
 		extents = [ device.grid.bounds[1][1], device.grid.bounds[2][1],
@@ -77,9 +60,7 @@ function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, 
 		ax[:imshow](Z, extent=extents, origin="lower", cmap="YlGnBu");
 	end
 
-	#if maximum.(abs.(Zi)[:]) > 0.0
-		ax[:contour](xc(device.grid), yc(device.grid), Zi, cmap="YlGnBu_r");
-	#end
+	ax[:contour](xc(device.grid), yc(device.grid), Zi, colors=lc, linewidths=0.5, linestyles=":");
 
 	if isa(device, ModulatedDevice)
 		Z2 = abs.(device.Δϵᵣ)';
@@ -89,35 +70,21 @@ function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, 
 	ax[:set_ylabel](L"$y$");
 end
 
-"    add_scalebar(axs::Array{<:PyObject}, xy::AbstractArray; fc::String=\"k\", width::Number=1.0, height::Number=0.125, hide::Bool=true)"
-function add_scalebar(axs::Array{<:PyObject}, xy::AbstractArray; fc::String="k", width::Number=1.0, height::Number=0.125, hide::Bool=true)
-	for i in eachindex(axs)
-		add_scalebar(axs[i], xy, fc=fc, width=width, height=height, hide=hide);
-	end
-end
-
-"    add_scalebar(ax::PyObject, xy::AbstractArray; fc::String=\"k\", width::Number=1.0, height::Number=0.125, hide::Bool=true)"
-function add_scalebar(ax::PyObject, xy::AbstractArray; fc::String="k", width::Number=1.0, height::Number=0.125, hide::Bool=true)
-    ax[:add_patch](matplotlib[:patches][:Rectangle](xy-[width/2,height/2],width,height,fc=fc));
-    ax[:annotate](xy=xy+[0,height/2],s=@sprintf("%d",width)*L" $\mu$m",fontsize="smaller",ha="center",va="bottom",multialignment="center",color=fc);
+"    add_scalebar(ax::PyObject, pt::Point; fc::String=\"k\", width::Number=1.0, height::Number=0.125, hide::Bool=true)"
+function add_scalebar(ax::PyObject, pt::Point; fc::String="k", width::Number=1.0, height::Number=0.125, hide::Bool=true)
+    ax[:add_patch](matplotlib[:patches][:Rectangle](pt-[width/2,height/2],width,height,fc=fc));
+    ax[:annotate](xy=pt+[0,height/2],s=@sprintf("%d",width)*L" $\mu$m",fontsize="smaller",ha="center",va="bottom",multialignment="center",color=fc);
     if hide
     	ax[:axes][:get_xaxis]()[:set_visible](false);
     	ax[:axes][:get_yaxis]()[:set_visible](false);
     end
 end
 
-"    add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String=\"k\", height::Number=0.125)"
-function add_wavelengthbar(ax::PyObject, field::Field, xy::AbstractArray; fc::String="k", height::Number=0.125)
+"    add_wavelengthbar(ax::PyObject, field::Field, pt::Point; fc::String=\"k\", height::Number=0.125)"
+function add_wavelengthbar(ax::PyObject, field::Field, pt::Point; fc::String="k", height::Number=0.125)
 	λ₀ = 2π*c₀/real(field.ω)/1e-6
-    ax[:add_patch](matplotlib[:patches][:Rectangle](xy-[λ₀/2,height/2],λ₀,height,fc=fc));
-    ax[:annotate](xy=xy+[0,height/2],s=L"$\lambda_0$",fontsize="smaller",ha="center",va="bottom",multialignment="center",color=fc);
-end
-
-"    add_wavelengthbar(axs::Array{<:PyObject}, fields::Array{<:Field}, xy::AbstractArray; fc::String=\"k\", height::Number=0.125)"
-function add_wavelengthbar(axs::Array{<:PyObject}, fields::Array{<:Field}, xy::AbstractArray; fc::String="k", height::Number=0.125)
-	for i in eachindex(axs)
-		add_wavelengthbar(axs[i], fields[i], xy, fc=fc, height=height)
-	end
+    ax[:add_patch](matplotlib[:patches][:Rectangle](pt-[λ₀/2,height/2],λ₀,height,fc=fc));
+    ax[:annotate](xy=pt+[0,height/2],s=L"$\lambda_0$",fontsize="smaller",ha="center",va="bottom",multialignment="center",color=fc);
 end
 
 end
