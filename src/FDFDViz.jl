@@ -1,6 +1,6 @@
 module FDFDViz
 
-using FDFD, PyPlot, PyCall, AxisArrays
+using FDFD, PyPlot, PyCall, AxisArrays, Printf
 
 export plot_field, plot_device, add_scalebar, add_wavelengthbar
 
@@ -13,8 +13,8 @@ end
 
 "    plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)"
 function plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)
-	isa(field, FieldTM) && (Z = transpose(funcz.(field[:,:,:Ez])));
-	isa(field, FieldTE) && (Z = transpose(funcz.(field[:,:,:Hz])));
+	isa(field, FieldTM) && (Z = funcz.(permutedims(field[:,:,:Ez], (2,1))));
+	isa(field, FieldTE) && (Z = funcz.(permutedims(field[:,:,:Hz], (2,1))));
 
 	if funcz == abs
 		vmin = 0;
@@ -48,8 +48,8 @@ end
 
 "    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
 function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
-	Z = transpose(real.(device.ϵᵣ));
-	Zi = transpose(imag.(device.ϵᵣ));
+	Z = real.(permutedims(device.ϵᵣ, (2,1)));
+	Zi = imag.(permutedims(device.ϵᵣ, (2,1)));
 
 	if outline
 		ax[:contour](xc(device.grid), yc(device.grid), Z, linewidths=0.25, colors=lc);
@@ -63,7 +63,7 @@ function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, 
 	ax[:contour](xc(device.grid), yc(device.grid), Zi, colors=lc, linewidths=0.5, linestyles=":");
 
 	if isa(device, ModulatedDevice)
-		Z2 = abs.(device.Δϵᵣ)';
+		Z2 = abs.(permutedims(device.Δϵᵣ, (2,1)));
 		ax[:contour](xc(device.grid), yc(device.grid), Z2, levels=1, linewidths=0.5, colors=lcm);
 	end
 	ax[:set_xlabel](L"$x$");
