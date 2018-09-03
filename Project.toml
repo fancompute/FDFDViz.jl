@@ -1,0 +1,10 @@
+authors = ["Ian Williamson <iwill@stanford.edu>"]
+name = "FDFDViz"
+uuid = "b7d3d356-afc9-11e8-3c69-637e654e70cd"
+version = "0.1.0"
+
+[deps]
+FDFD = "47249150-a57d-11e8-0850-953555c55631"
+AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"

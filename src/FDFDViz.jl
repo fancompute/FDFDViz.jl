@@ -13,8 +13,8 @@ end
 
 "    plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)"
 function plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)
-	isa(field, FieldTM) && (Z = funcz.(field[:,:,:Ez]).');
-	isa(field, FieldTE) && (Z = funcz.(field[:,:,:Hz]).');
+	isa(field, FieldTM) && (Z = transpose(funcz.(field[:,:,:Ez])));
+	isa(field, FieldTE) && (Z = transpose(funcz.(field[:,:,:Hz])));
 
 	if funcz == abs
 		vmin = 0;
@@ -48,8 +48,8 @@ end
 
 "    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
 function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
-	Z = real.(device.ϵᵣ)';
-	Zi = imag.(device.ϵᵣ)';
+	Z = transpose(real.(device.ϵᵣ));
+	Zi = transpose(imag.(device.ϵᵣ));
 
 	if outline
 		ax[:contour](xc(device.grid), yc(device.grid), Z, linewidths=0.25, colors=lc);
