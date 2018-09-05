@@ -5,16 +5,20 @@ using FDFD, PyPlot, PyCall, AxisArrays, Printf
 export plot_field, plot_device, add_scalebar, add_wavelengthbar
 
 "    plot_field(field::Field; cbar::Bool=false, funcz=real)"
-function plot_field(field::Field; cbar::Bool=false, funcz=real)
+function plot_field(field::Field; cbar::Bool=false, funcz=real, component=nothing)
 	fig, ax = subplots(1);
-	plot_field(ax, field; cbar=cbar, funcz=funcz);
+	plot_field(ax, field; cbar=cbar, funcz=funcz, component=component);
 	return ax
 end
 
 "    plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)"
-function plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)
-	isa(field, FieldTM) && (Z = funcz.(permutedims(field[:,:,:Ez], (2,1))));
-	isa(field, FieldTE) && (Z = funcz.(permutedims(field[:,:,:Hz], (2,1))));
+function plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real, component=nothing)
+	# Set defaults
+	isa(field, FieldTM) && component == nothing && (component=:Ez);
+	isa(field, FieldTE) && component == nothing && (component=:Hz);
+	isa(field, FieldAll) && component == nothing && (component=:Ex);
+	
+	Z = funcz.(permutedims(field[:, :, component], (2,1)))
 
 	if funcz == abs
 		vmin = 0;
@@ -39,15 +43,15 @@ function plot_field(ax::PyObject, field::Field; cbar::Bool=false, funcz=real)
 	ax[:set_title](@sprintf("ω/2π = %.2f THz", real(field.ω/2π/1e12)));
 end
 
-"    plot_device(device::AbstractDevice; outline::Bool=false)"
-function plot_device(device::AbstractDevice; outline::Bool=false)
+"    plot_device(device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
+function plot_device(device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
 	fig, ax = subplots(1);
-	plot_device(ax, device; outline=outline);
+	plot_device(ax, device; outline=outline, lc=lc, lcm=lcm);
 	return ax
 end
 
-"    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String=\"k\", lcm::String=\"k\")"
-function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=false, lc::String="k", lcm::String="k")
+"    plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=true, lc::String=\"k\", lcm::String=\"k\")"
+function plot_device(ax::PyObject, device::AbstractDevice; outline::Bool=true, lc::String="k", lcm::String="k")
 	Z = real.(permutedims(device.ϵᵣ, (2,1)));
 	Zi = imag.(permutedims(device.ϵᵣ, (2,1)));
 
